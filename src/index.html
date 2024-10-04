@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Produits et Commandes</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 0;
+            text-align: center;
+        }
+        main {
+            display: flex;
+            padding: 20px;
+        }
+        #produits, #commandes {
+            width: 50%;
+            padding: 20px;
+            background-color: white;
+            margin: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        #produits {
+            margin-right: 20px;
+        }
+        h2 {
+            margin-top: 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        form {
+            margin-top: 20px;
+        }
+        input, select, button {
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            width: calc(100% - 22px);
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Gestion des Produits et Commandes</h1>
+    </header>
+    <main>
+        <!-- Section Produits -->
+        <div id="produits">
+            <h2>Liste des Produits</h2>
+            <table id="table-produits">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nom</th>
+                        <th>Description</th>
+                        <th>Prix</th>
+                        <th>Stock</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Produits seront ajoutés ici par JavaScript -->
+                </tbody>
+            </table>
+
+            <!-- Formulaire d'ajout de produit (admin seulement) -->
+            <form id="form-produit" style="display: none;">
+                <h2>Ajouter / Modifier un Produit</h2>
+                <input type="hidden" id="produit-id" />
+                <input type="text" id="nom" placeholder="Nom du produit" required />
+                <textarea id="description" placeholder="Description du produit"></textarea>
+                <input type="number" id="prix" placeholder="Prix" step="0.01" required />
+                <input type="number" id="stock" placeholder="Stock" required />
+                <button type="button" onclick="ajouterModifierProduit()">Ajouter / Modifier</button>
+            </form>
+        </div>
+
+        <!-- Section Commandes -->
+        <div id="commandes">
+            <h2>Liste des Commandes</h2>
+            <table id="table-commandes">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Client</th>
+                        <th>Date de Commande</th>
+                        <th>Admin</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Commandes seront ajoutées ici par JavaScript -->
+                </tbody>
+            </table>
+
+            <!-- Formulaire d'ajout de commande -->
+            <form id="form-commande">
+                <h2>Créer une Commande</h2>
+                <select id="produit-select">
+                    <!-- Options des produits seront ajoutées ici par JavaScript -->
+                </select>
+                <input type="number" id="quantite" placeholder="Quantité" required />
+                <button type="button" onclick="ajouterCommande()">Créer Commande</button>
+            </form>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Charger les produits et les commandes dès le chargement de la page
+            listerProduits();
+            listerCommandes();
+        });
+
+        // Fonction pour lister les produits
+        function listerProduits() {
+            fetch('api.php?action=listerProduits')
+                .then(response => response.json())
+                .then(data => {
+                    const tableBody = document.querySelector('#table-produits tbody');
+                    const produitSelect = document.getElementById('produit-select');
+                    tableBody.innerHTML = '';
+                    produitSelect.innerHTML = '';
+
+                    data.forEach(produit => {
+                        const row = `<tr>
+                            <td>${produit.id}</td>
+                            <td>${produit.nom}</td>
+                            <td>${produit.description}</td>
+                            <td>${produit.prix}</td>
+                            <td>${produit.stock}</td>
+                        </tr>`;
+                        tableBody.insertAdjacentHTML('beforeend', row);
+
+                        // Ajouter produit au menu déroulant de sélection des commandes
+                        const option = `<option value="${produit.id}">${produit.nom}</option>`;
+                        produitSelect.insertAdjacentHTML('beforeend', option);
+                    });
+                });
+        }
+
+        // Fonction pour lister les commandes
+        function listerCommandes() {
+            fetch('api.php?action=listerCommandes')
+                .then(response => response.json())
+                .then(data => {
+                    const tableBody = document.querySelector('#table-commandes tbody');
+                    tableBody.innerHTML = '';
+
+                    data.forEach(commande => {
+                        const row = `<tr>
+                            <td>${commande.id}</td>
+                            <td>${commande.client}</td>
+                            <td>${commande.date_commande}</td>
+                            <td>${commande.is_admin ? 'Oui' : 'Non'}</td>
+                            <td><button onclick="supprimerCommande(${commande.id})">Supprimer</button></td>
+                        </tr>`;
+                        tableBody.insertAdjacentHTML('beforeend', row);
+                    });
+                });
+        }
+
+        // Ajouter ou modifier un produit (admin seulement)
+        function ajouterModifierProduit() {
+            const id = document.getElementById('produit-id').value;
+            const nom = document.getElementById('nom').value;
+            const description = document.getElementById('description').value;
+            const prix = document.getElementById('prix').value;
+            const stock = document.getElementById('stock').value;
+
+            const action = id ? 'modifierProduit' : 'ajouterProduit';
+            const formData = new FormData();
+            formData.append('id', id);
+            formData.append('nom', nom);
+            formData.append('description', description);
+            formData.append('prix', prix);
+            formData.append('stock', stock);
+
+            fetch(`api.php?action=${action}`, {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(result => {
+                    alert(result.message || result.error);
+                    listerProduits();
+                });
+        }
+
+        // Ajouter une commande
+        function ajouterCommande() {
+            const produitId = document.getElementById('produit-select').value;
+            const quantite = document.getElementById('quantite').value;
+
+            const formData = new FormData();
+            formData.append('produit_id', produitId);
+            formData.append('quantite', quantite);
+
+            fetch('api.php?action=ajouterCommande', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(result => {
+                    alert(result.message || result.error);
+                    listerCommandes();
+                });
+        }
+
+        // Supprimer une commande
+        function supprimerCommande(id) {
+            const formData = new FormData();
+            formData.append('id', id);
+
+            fetch('api.php?action=supprimerCommande', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(result => {
+                    alert(result.message || result.error);
+                    listerCommandes();
+                });
+        }
+    </script>
+</body>
+</html>
